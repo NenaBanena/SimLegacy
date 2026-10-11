@@ -1,0 +1,268 @@
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SimLegacy ✦</title>
+<style>
+:root {
+  --bg: #100d19;
+  --card: #21182e;
+  --pink: #f3a6d2;
+  --purple: #bda5ff;
+  --text: #fff4ff;
+  --muted: #c5b5d3;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: radial-gradient(ellipse at top, #382044, var(--bg) 65%);
+  color: var(--text);
+  font-family: system-ui, sans-serif;
+  min-height: 100vh;
+}
+header {
+  text-align: center;
+  padding: 38px 16px 25px;
+}
+h1 {
+  margin: 0;
+  font-size: clamp(36px, 8vw, 56px);
+  color: var(--pink);
+  letter-spacing: -2px;
+}
+header p { color: var(--muted); }
+main { max-width: 1050px; margin: auto; padding: 16px; }
+nav {
+  display: flex; gap: 8px; justify-content: center;
+  flex-wrap: wrap; margin: 18px 0;
+}
+button {
+  border: 1px solid #594268; border-radius: 12px;
+  background: var(--card); color: var(--text);
+  padding: 11px 15px; font: inherit; cursor: pointer;
+}
+button:hover { border-color: var(--pink); }
+button.active, .pink {
+  background: var(--pink); color: #26152a;
+  border-color: var(--pink); font-weight: bold;
+}
+h2 { color: var(--pink); }
+.panel {
+  background: #1a1425eF; border: 1px solid #493451;
+  border-radius: 20px; padding: 20px; margin: 16px 0;
+}
+.tree {
+  display: flex; flex-wrap: wrap; gap: 14px;
+  justify-content: center; margin: 22px 0;
+}
+.sim {
+  width: 155px; text-align: center;
+  padding: 13px 8px; border-radius: 16px;
+  border: 1px solid #493451; background: var(--card);
+  cursor: pointer;
+}
+.sim:hover { border-color: var(--pink); transform: translateY(-2px); }
+.portrait {
+  width: 100%; height: 110px; object-fit: cover;
+  border-radius: 11px; background: #392846;
+  display: grid; place-items: center; font-size: 38px;
+  margin-bottom: 9px;
+}
+.muted, small { color: var(--muted); }
+input, textarea, select {
+  width: 100%; padding: 11px; margin: 5px 0 13px;
+  border-radius: 10px; border: 1px solid #594268;
+  background: #100d19; color: var(--text); font: inherit;
+}
+label { color: var(--muted); font-size: 14px; }
+.grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  gap: 12px;
+}
+.gallery {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(125px, 1fr));
+  gap: 12px; margin-top: 16px;
+}
+.stage {
+  border: 1px solid #493451; border-radius: 14px;
+  padding: 10px; background: var(--card);
+}
+.stage img { width: 100%; height: 130px; object-fit: cover; border-radius: 9px; }
+.stage input { font-size: 12px; }
+.hidden { display: none; }
+footer { text-align: center; color: var(--muted); padding: 30px 12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>SimLegacy ✦</h1>
+  <p>YOUR SIMS. YOUR STORY.</p>
+  <nav>
+    <button class="active" onclick="show('home',this)">🌳 Family Tree</button>
+    <button onclick="show('all',this)">👥 All Sims</button>
+    <button onclick="show('add',this)">＋ Add Sim</button>
+  </nav>
+</header>
+
+<main>
+<section id="home" class="panel">
+  <h2>✧ The Family Tree ✧</h2>
+  <p class="muted">Wähle einen Sim, um seine Geschichte zu entdecken.</p>
+  <div id="tree" class="tree"></div>
+  <p class="muted">Deine Legacy beginnt hier. Füge deine Sims hinzu und gestalte ihre Geschichten.</p>
+</section>
+
+<section id="all" class="panel hidden">
+  <h2>All Sims</h2>
+  <div id="allSims" class="tree"></div>
+</section>
+
+<section id="add" class="panel hidden">
+  <h2>＋ Add a Sim</h2>
+  <label>Name</label>
+  <input id="name" placeholder="z. B. Leah Cheng-Pietsch">
+  <label>Lebensphase</label>
+  <select id="age">
+    <option>Baby</option><option>Kleinkind</option><option>Kind</option>
+    <option>Teenager</option><option>Junge Erwachsene</option>
+    <option>Erwachsene</option><option>Senior</option>
+  </select>
+  <label>Eltern (optional)</label>
+  <select id="parents" multiple size="3"></select>
+  <small>Mehrere Eltern mit Strg/Cmd auswählen, falls nötig.</small>
+  <p><label>Biografie</label>
+  <textarea id="bio" placeholder="Persönlichkeit, Träume, Geheimnisse …"></textarea></p>
+  <button class="pink" onclick="addSim()">Create Sim ✦</button>
+</section>
+
+<section id="profile" class="panel hidden"></section>
+</main>
+
+<footer>SimLegacy ✦ A little universe of Sims stories</footer>
+
+<script>
+const ages = [
+  ["Baby","🍼"],["Kleinkind","🧸"],["Kind","🪁"],
+  ["Teenager","🎧"],["Junge Erwachsene","✨"],
+  ["Erwachsene","🌷"],["Senior","🌙"]
+];
+let sims = [];
+try { sims = JSON.parse(localStorage.getItem("simlegacy_sims") || "[]"); }
+catch(e) { sims = []; }
+
+function save() {
+  try { localStorage.setItem("simlegacy_sims", JSON.stringify(sims)); }
+  catch(e) { alert("Speicher voll. Bitte verwende kleinere Bilder."); }
+}
+function safe(s) {
+  return String(s || "").replace(/[&<>"']/g, c =>
+    ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function show(id, btn) {
+  document.querySelectorAll("main > section").forEach(s => s.classList.add("hidden"));
+  document.getElementById(id).classList.remove("hidden");
+  document.querySelectorAll("nav button").forEach(b => b.classList.remove("active"));
+  if(btn) btn.classList.add("active");
+  render();
+}
+function face(s) {
+  if(s.photo) return `<img class="portrait" src="${s.photo}" alt="">`;
+  const emoji = (ages.find(a=>a[0]===s.age)||["","✨"])[1];
+  return `<div class="portrait">${emoji}</div>`;
+}
+function card(s) {
+  return `<div class="sim" onclick="profile('${s.id}')">
+    ${face(s)}<b>${safe(s.name)}</b><br><small>${safe(s.age)}</small>
+  </div>`;
+}
+function render() {
+  document.getElementById("tree").innerHTML = sims.length
+    ? sims.map(card).join("")
+    : '<p class="muted">Noch keine Sims. Füge deinen ersten Sim hinzu! 💜</p>';
+  document.getElementById("allSims").innerHTML = sims.length
+    ? sims.map(card).join("")
+    : '<p class="muted">Deine Sims erscheinen hier.</p>';
+  const p = document.getElementById("parents");
+  if(p) {
+    const selected = [...p.selectedOptions].map(o=>o.value);
+    p.innerHTML = sims.map(s=>`<option value="${s.id}">${safe(s.name)}</option>`).join("");
+    [...p.options].forEach(o=>o.selected=selected.includes(o.value));
+  }
+}
+function addSim() {
+  const name = document.getElementById("name").value.trim();
+  if(!name) { alert("Bitte gib deinem Sim einen Namen!"); return; }
+  sims.push({
+    id: Date.now().toString(36)+Math.random().toString(36).slice(2,6),
+    name, age: document.getElementById("age").value,
+    parents: [...document.getElementById("parents").selectedOptions].map(o=>o.value),
+    bio: document.getElementById("bio").value,
+    photo:"", stages:{}
+  });
+  save();
+  document.getElementById("name").value="";
+  document.getElementById("bio").value="";
+  show("home", document.querySelector("nav button"));
+}
+function profile(id) {
+  const s = sims.find(x=>x.id===id);
+  if(!s) return;
+  document.querySelectorAll("main > section").forEach(x=>x.classList.add("hidden"));
+  const p = document.getElementById("profile");
+  p.classList.remove("hidden");
+  const parents = (s.parents||[]).map(id=>sims.find(x=>x.id===id)).filter(Boolean);
+  p.innerHTML = `<button onclick="show('home',document.querySelector('nav button'))">← Family Tree</button>
+    <div style="max-width:240px;margin:20px auto;text-align:center">
+      ${face(s)}<h2>${safe(s.name)}</h2><p class="muted">${safe(s.age)}</p>
+      <label>Aktuelles Porträt</label>
+      <input type="file" accept="image/*" onchange="setPhoto('${s.id}',this.files[0])">
+    </div>
+    <h2>About ${safe(s.name)}</h2>
+    <label>Lebensphase</label><select onchange="field('${s.id}','age',this.value)">
+      ${ages.map(a=>`<option ${a[0]===s.age?'selected':''}>${a[0]}</option>`).join("")}
+    </select>
+    <label>Biografie</label><textarea onchange="field('${s.id}','bio',this.value)">${safe(s.bio)}</textarea>
+    <p><b>Eltern:</b> ${parents.length?parents.map(x=>safe(x.name)).join(", "):"Noch nicht eingetragen"}</p>
+    <h2>📸 Life Gallery</h2>
+    <p class="muted">Füge für jede Lebensphase ein Erinnerungsfoto hinzu.</p>
+    <div class="gallery">${ages.map(a=>`<div class="stage">
+      <b>${a[1]} ${a[0]}</b>
+      ${s.stages?.[a[0]]?.photo?`<img src="${s.stages[a[0]].photo}" alt="">`:""}
+      <input type="file" accept="image/*" onchange="setStage('${s.id}','${a[0]}',this.files[0])">
+    </div>`).join("")}</div>
+    <p style="margin-top:20px"><button onclick="removeSim('${s.id}')">Delete Sim</button></p>`;
+}
+function field(id,key,value) {
+  const s=sims.find(x=>x.id===id); if(!s)return;
+  s[key]=value; save();
+}
+function readImage(file) {
+  return new Promise((resolve,reject)=>{
+    const r=new FileReader(); r.onload=()=>resolve(r.result);
+    r.onerror=reject; r.readAsDataURL(file);
+  });
+}
+async function setPhoto(id,file) {
+  if(!file)return;
+  const s=sims.find(x=>x.id===id); if(!s)return;
+  s.photo=await readImage(file); save(); profile(id);
+}
+async function setStage(id,age,file) {
+  if(!file)return;
+  const s=sims.find(x=>x.id===id); if(!s)return;
+  s.stages=s.stages||{};
+  s.stages[age]={photo:await readImage(file)};
+  save(); profile(id);
+}
+function removeSim(id) {
+  if(!confirm("Diesen Sim wirklich löschen?"))return;
+  sims=sims.filter(s=>s.id!==id);
+  sims.forEach(s=>s.parents=(s.parents||[]).filter(p=>p!==id));
+  save(); show("home",document.querySelector("nav button"));
+}
+render();
+</script>
+</body>
+</html>
